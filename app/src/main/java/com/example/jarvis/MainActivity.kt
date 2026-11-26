@@ -162,7 +162,7 @@ class MainActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
-        try { unregisterReceiver(updates) } catch (_: Exception) {}
+        try { unregisterReceiver(updates) } catch (e: Exception) {}
     }
 
     private fun requestAndToggle() {

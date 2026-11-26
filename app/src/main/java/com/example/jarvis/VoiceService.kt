@@ -78,7 +78,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
             "COMMAND_NOW" -> {
                 if (listening) {
                     commandMode = true
-                    try { porcupineManager?.stop() } catch (_: Exception) {}
+                    try { porcupineManager?.stop() } catch (e: Exception) {}
                     publish("LISTENING • กรุณาพูดคำสั่ง", "กำลังรอคำสั่งเสียง", true)
                     beginRecognition()
                 }
@@ -136,7 +136,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
             cpuWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "JARVIS:WakeWord")
             cpuWakeLock?.setReferenceCounted(false)
             if (cpuWakeLock?.isHeld != true) cpuWakeLock?.acquire()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             publish("WAKE LOCK UNAVAILABLE", "ระบบไม่อนุญาตให้คง CPU ทำงาน", true)
         }
     }
@@ -166,7 +166,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
     private fun onWakeWordDetected() {
         if (!listening || commandMode) return
         commandMode = true
-        try { porcupineManager?.stop() } catch (_: Exception) {}
+        try { porcupineManager?.stop() } catch (e: Exception) {}
         publish("WAKE WORD DETECTED • LISTENING",
             "ครับ ผมอยู่ตรงนี้ กรุณาพูดคำสั่งได้เลยครับ", true)
         speak("ครับ ผมอยู่ตรงนี้ กรุณาพูดคำสั่งได้เลยครับ", resumeWake = false)
@@ -178,12 +178,12 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
         commandMode = false
         config.edit().putBoolean("active", false).apply()
         handler.removeCallbacksAndMessages(null)
-        try { recognizer?.cancel(); recognizer?.destroy() } catch (_: Exception) {}
+        try { recognizer?.cancel(); recognizer?.destroy() } catch (e: Exception) {}
         recognizer = null
-        try { porcupineManager?.stop() } catch (_: Exception) {}
-        try { porcupineManager?.delete() } catch (_: Exception) {}
+        try { porcupineManager?.stop() } catch (e: Exception) {}
+        try { porcupineManager?.delete() } catch (e: Exception) {}
         porcupineManager = null
-        try { cpuWakeLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) {}
+        try { cpuWakeLock?.let { if (it.isHeld) it.release() } } catch (e: Exception) {}
         cpuWakeLock = null
         publish("STANDBY • ปิดไมโครโฟนแล้ว", "ไมโครโฟนหยุดทำงาน", false)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -231,14 +231,14 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
                 putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
             }
             recognizer?.startListening(intent)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             returnToWakeWord(1200)
         }
     }
 
     private fun returnToWakeWord(delayMs: Long) {
         commandMode = false
-        try { recognizer?.cancel() } catch (_: Exception) {}
+        try { recognizer?.cancel() } catch (e: Exception) {}
         handler.postDelayed({
             if (listening && !commandMode) startWakeWordEngine()
         }, delayMs)
@@ -270,7 +270,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
             c.contains("เปิด gmail") -> launch("com.google.android.gm", "Gmail")
             c.contains("เปิดกล้อง") -> {
                 try { startActivity(Intent("android.media.action.IMAGE_CAPTURE").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); reply("กำลังเปิดกล้องครับ") }
-                catch (_: Exception) { reply("ไม่สามารถเปิดกล้องได้ครับ") }
+                catch (e: Exception) { reply("ไม่สามารถเปิดกล้องได้ครับ") }
             }
             c.contains("โทร") -> {
                 val number = Regex("[0-9]{3,}").find(command)?.value
@@ -278,7 +278,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
                     try {
                         startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$number")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         reply("เปิดหน้าจอโทรออกไปยัง $number แล้วครับ กรุณากดยืนยันโทร")
-                    } catch (_: Exception) { reply("ไม่สามารถเปิดหน้าจอโทรศัพท์ได้ครับ") }
+                    } catch (e: Exception) { reply("ไม่สามารถเปิดหน้าจอโทรศัพท์ได้ครับ") }
                 } else reply("กรุณาพูดหมายเลขโทรศัพท์ที่ต้องการโทรครับ")
             }
             c.contains("ตั้งปลุก") || c.contains("ตั้งนาฬิกาปลุก") -> setAlarm(command)
@@ -322,7 +322,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
                 val body = JSONObject().apply {
                     put("model", openAiModel.ifBlank { "gpt-5.5" })
                     put("instructions", instructions)
-                    put("input", "บริบทบทสนทนาล่าสุด:\\n$history\\n\\nข้อความใหม่จากผู้ใช้:\\n$userText")
+                    put("input", "บริบทบทสนทนาล่าสุด:\n$history\n\nข้อความใหม่จากผู้ใช้:\n$userText")
                     put("store", false)
                 }
                 OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { it.write(body.toString()) }
@@ -330,7 +330,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
                 val stream = if (code in 200..299) connection.inputStream else connection.errorStream
                 val responseText = BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use { it.readText() }
                 if (code !in 200..299) {
-                    val apiMessage = try { JSONObject(responseText).optJSONObject("error")?.optString("message") } catch (_: Exception) { null }
+                    val apiMessage = try { JSONObject(responseText).optJSONObject("error")?.optString("message") } catch (e: Exception) { null }
                     throw IllegalStateException("OpenAI API HTTP $code: ${apiMessage ?: responseText.take(240)}")
                 }
                 val json = JSONObject(responseText)
@@ -347,7 +347,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
                         }
                     }
                 }
-                val answer = parts.joinToString("\\n").trim()
+                val answer = parts.joinToString("\n").trim()
                 if (answer.isBlank()) throw IllegalStateException("Empty AI response")
                 saveMemory("JARVIS", answer)
                 handler.post {
@@ -385,7 +385,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
                 startActivity(i)
                 reply("กำลังเปิด $label ให้ครับ")
             }
-        } catch (_: Exception) { reply("เปิด $label ไม่สำเร็จครับ") }
+        } catch (e: Exception) { reply("เปิด $label ไม่สำเร็จครับ") }
     }
 
     private fun setAlarm(text: String) {
@@ -407,7 +407,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
             }
             startActivity(i)
             reply("เปิดหน้าตั้งนาฬิกาปลุกเวลา %02d:%02d แล้วครับ กรุณาตรวจสอบและยืนยัน".format(hour, minute))
-        } catch (_: Exception) { reply("ไม่สามารถเปิดแอปนาฬิกาได้ครับ") }
+        } catch (e: Exception) { reply("ไม่สามารถเปิดแอปนาฬิกาได้ครับ") }
     }
 
     private fun adjustVolume(direction: Int) {
@@ -474,11 +474,11 @@ class VoiceService : Service(), TextToSpeech.OnInitListener {
     override fun onDestroy() {
         listening = false
         config.edit().putBoolean("active", false).apply()
-        try { recognizer?.destroy() } catch (_: Exception) {}
+        try { recognizer?.destroy() } catch (e: Exception) {}
         recognizer = null
-        try { porcupineManager?.stop(); porcupineManager?.delete() } catch (_: Exception) {}
+        try { porcupineManager?.stop(); porcupineManager?.delete() } catch (e: Exception) {}
         porcupineManager = null
-        try { cpuWakeLock?.let { if (it.isHeld) it.release() } } catch (_: Exception) {}
+        try { cpuWakeLock?.let { if (it.isHeld) it.release() } } catch (e: Exception) {}
         cpuWakeLock = null
         tts?.stop()
         tts?.shutdown()

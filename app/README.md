@@ -1,1 +1,1 @@
-JARVIS Galaxy A07 Android Application
+JARVIS Android Main Source Directory
